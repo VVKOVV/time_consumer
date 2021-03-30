@@ -1,6 +1,7 @@
 import kafka
 from time import sleep, strftime, gmtime
 from os import environ
+from prometheus_client import start_http_server, Counter
 
 try:
     server = environ['KAFKA_SERVER']
@@ -43,11 +44,13 @@ def kafka_process(server, topic_name = 'input'):
         topic_name,
         bootstrap_servers = server,
         auto_offset_reset = 'earliest',
-        enable_auto_commit = True
+        enable_auto_commit = True,
+        group_id  = 'test-consumer-group'
     )
     for i in consumer:
         epoch_time = float(i.value.decode())
         write_the_data(server, epoch_time)
+        prometheus_counts.inc()
     return list_of_epoch_time
 
 
@@ -72,6 +75,8 @@ def start_the_process(server):
     check_output_topic(server)
     kafka_process(server)
 
+start_http_server(5000)
+prometheus_counts = Counter('consumer_convert', 'time converted')
 
 while True:
     try:
